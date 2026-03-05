@@ -1,8 +1,27 @@
 import 'package:enough_mail/enough_mail.dart';
 
+class _SessionInfo {
+  ImapClient client;
+  final String host;
+  final int port;
+  final bool useSsl;
+  final String email;
+  final String password;
+
+  _SessionInfo({
+    required this.client,
+    required this.host,
+    required this.port,
+    required this.useSsl,
+    required this.email,
+    required this.password,
+  });
+}
+
 /// Holds one IMAP session per session token.
+/// Auto-reconnects if the session is lost (e.g. after server restart).
 class ImapSessionManager {
-  final _sessions = <String, ImapClient>{};
+  final _sessions = <String, _SessionInfo>{};
 
   Future<void> connect({
     required String sessionId,
@@ -18,28 +37,46 @@ class ImapSessionManager {
     final client = ImapClient(isLogEnabled: false);
     await client.connectToServer(host, port, isSecure: useSsl);
     await client.login(email, password);
-    _sessions[sessionId] = client;
+    _sessions[sessionId] = _SessionInfo(
+      client: client,
+      host: host,
+      port: port,
+      useSsl: useSsl,
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> disconnect(String sessionId) async {
-    final client = _sessions.remove(sessionId);
-    if (client != null) {
+    final info = _sessions.remove(sessionId);
+    if (info != null) {
       try {
-        await client.logout();
+        await info.client.logout();
       } catch (_) {}
     }
   }
 
-  ImapClient _get(String sessionId) {
-    final client = _sessions[sessionId];
-    if (client == null) {
+  Future<ImapClient> _get(String sessionId) async {
+    final info = _sessions[sessionId];
+    if (info == null) {
       throw StateError('No IMAP session for $sessionId');
     }
-    return client;
+
+    // Check if client is still alive, reconnect if not
+    try {
+      await info.client.noop();
+    } catch (_) {
+      final client = ImapClient(isLogEnabled: false);
+      await client.connectToServer(info.host, info.port, isSecure: info.useSsl);
+      await client.login(info.email, info.password);
+      info.client = client;
+    }
+
+    return info.client;
   }
 
   Future<int> selectInbox(String sessionId) async {
-    final client = _get(sessionId);
+    final client = await _get(sessionId);
     final mailbox = await client.selectInbox();
     return mailbox.messagesExists;
   }
@@ -49,7 +86,7 @@ class ImapSessionManager {
     required int start,
     required int end,
   }) async {
-    final client = _get(sessionId);
+    final client = await _get(sessionId);
     if (start > end) return [];
 
     final sequence =
@@ -92,16 +129,17 @@ class ImapSessionManager {
   }
 
   Future<void> deleteMessages(String sessionId, List<int> uids) async {
-    final client = _get(sessionId);
+    final client = await _get(sessionId);
     if (uids.isEmpty) return;
 
+    await client.selectInbox();
     final sequence = MessageSequence.fromIds(uids, isUid: true);
     await client.uidStore(sequence, [MessageFlags.deleted]);
     await client.expunge();
   }
 
   Future<List<int>> searchUnseen(String sessionId) async {
-    final client = _get(sessionId);
+    final client = await _get(sessionId);
     final result =
         await client.searchMessages(searchCriteria: 'UNSEEN');
     return result.matchingSequence?.toList() ?? [];

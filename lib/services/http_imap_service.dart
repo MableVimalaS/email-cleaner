@@ -16,6 +16,7 @@ class HttpImapService implements ImapServiceInterface {
   final String _baseUrl;
   final String _sessionId = const Uuid().v4();
   bool _isConnected = false;
+  AccountConfig? _lastConfig;
 
   HttpImapService({String? baseUrl})
       : _baseUrl = baseUrl ??
@@ -27,6 +28,7 @@ class HttpImapService implements ImapServiceInterface {
 
   @override
   Future<void> connect(AccountConfig config) async {
+    _lastConfig = config;
     final response = await http.post(
       Uri.parse('$_baseUrl/connect'),
       headers: {'Content-Type': 'application/json'},
@@ -43,6 +45,11 @@ class HttpImapService implements ImapServiceInterface {
     _isConnected = true;
   }
 
+  Future<void> _reconnect() async {
+    if (_lastConfig == null) throw StateError('No credentials to reconnect');
+    await connect(_lastConfig!);
+  }
+
   @override
   Future<void> disconnect() async {
     try {
@@ -53,13 +60,20 @@ class HttpImapService implements ImapServiceInterface {
       );
     } catch (_) {}
     _isConnected = false;
+    _lastConfig = null;
   }
 
   @override
   Future<int> selectInbox() async {
-    final response = await http.get(
+    var response = await http.get(
       Uri.parse('$_baseUrl/inbox?sessionId=$_sessionId'),
     );
+    if (_isSessionLost(response)) {
+      await _reconnect();
+      response = await http.get(
+        Uri.parse('$_baseUrl/inbox?sessionId=$_sessionId'),
+      );
+    }
     _checkResponse(response);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return data['count'] as int;
@@ -70,10 +84,17 @@ class HttpImapService implements ImapServiceInterface {
     required int start,
     required int end,
   }) async {
-    final response = await http.get(
+    var response = await http.get(
       Uri.parse(
           '$_baseUrl/messages?sessionId=$_sessionId&start=$start&end=$end'),
     );
+    if (_isSessionLost(response)) {
+      await _reconnect();
+      response = await http.get(
+        Uri.parse(
+            '$_baseUrl/messages?sessionId=$_sessionId&start=$start&end=$end'),
+      );
+    }
     _checkResponse(response);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final list = data['messages'] as List;
@@ -83,7 +104,7 @@ class HttpImapService implements ImapServiceInterface {
   @override
   Future<void> deleteMessages(List<int> uids) async {
     if (uids.isEmpty) return;
-    final response = await http.post(
+    var response = await http.post(
       Uri.parse('$_baseUrl/delete'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -91,6 +112,17 @@ class HttpImapService implements ImapServiceInterface {
         'uids': uids,
       }),
     );
+    if (_isSessionLost(response)) {
+      await _reconnect();
+      response = await http.post(
+        Uri.parse('$_baseUrl/delete'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': _sessionId,
+          'uids': uids,
+        }),
+      );
+    }
     _checkResponse(response);
   }
 
@@ -110,12 +142,29 @@ class HttpImapService implements ImapServiceInterface {
 
   @override
   Future<List<int>> searchUnseen() async {
-    final response = await http.get(
+    var response = await http.get(
       Uri.parse('$_baseUrl/search/unseen?sessionId=$_sessionId'),
     );
+    if (_isSessionLost(response)) {
+      await _reconnect();
+      response = await http.get(
+        Uri.parse('$_baseUrl/search/unseen?sessionId=$_sessionId'),
+      );
+    }
     _checkResponse(response);
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return (data['uids'] as List).cast<int>();
+  }
+
+  bool _isSessionLost(http.Response response) {
+    if (response.statusCode != 500) return false;
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final error = body['error']?.toString() ?? '';
+      return error.contains('No IMAP session');
+    } catch (_) {
+      return false;
+    }
   }
 
   EmailMessage _fromJson(Map<String, dynamic> json) {
