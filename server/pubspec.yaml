@@ -1,0 +1,13 @@
+name: email_cleaner_server
+description: Backend IMAP proxy for Email Cleaner web app
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  shelf: ^1.4.0
+  shelf_router: ^1.1.0
+  shelf_cors_headers: ^0.1.5
+  enough_mail: ^2.1.0

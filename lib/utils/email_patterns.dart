@@ -1,0 +1,130 @@
+class EmailPatterns {
+  static const socialDomains = [
+    'facebook.com',
+    'facebookmail.com',
+    'twitter.com',
+    'x.com',
+    'linkedin.com',
+    'instagram.com',
+    'pinterest.com',
+    'reddit.com',
+    'tiktok.com',
+    'snapchat.com',
+    'discord.com',
+    'whatsapp.com',
+    'telegram.org',
+  ];
+
+  static const promoPrefixes = [
+    'promo',
+    'deals',
+    'offers',
+    'marketing',
+    'sales',
+    'shop',
+    'store',
+    'buy',
+  ];
+
+  static const bulkPrefixes = [
+    'noreply',
+    'no-reply',
+    'donotreply',
+    'do-not-reply',
+    'bounce',
+    'mailer-daemon',
+    'notifications',
+    'notify',
+    'info',
+    'support',
+    'news',
+    'newsletter',
+    'updates',
+    'digest',
+    'weekly',
+    'daily',
+  ];
+
+  static const promoSubjectTerms = [
+    'sale',
+    'discount',
+    'off',
+    'coupon',
+    'deal',
+    'offer',
+    'promo',
+    'free shipping',
+    'limited time',
+    'exclusive',
+    'clearance',
+    'save',
+    'buy now',
+    'shop now',
+    'order now',
+  ];
+
+  static const socialSubjectTerms = [
+    'liked your',
+    'commented on',
+    'shared your',
+    'tagged you',
+    'mentioned you',
+    'followed you',
+    'friend request',
+    'connection request',
+    'new follower',
+    'new message',
+    'invitation',
+    'joined',
+  ];
+
+  static const newsletterSubjectTerms = [
+    'newsletter',
+    'digest',
+    'weekly',
+    'daily',
+    'monthly',
+    'roundup',
+    'recap',
+    'edition',
+    'issue #',
+    'briefing',
+  ];
+
+  static const spamTerms = [
+    'winner',
+    'congratulations',
+    'claim your',
+    'act now',
+    'urgent',
+    'verify your account',
+    'suspended',
+    'lottery',
+    'inheritance',
+    'nigerian',
+    'wire transfer',
+    'million dollars',
+    'viagra',
+    'pharmacy',
+  ];
+
+  static const updateSubjectTerms = [
+    'receipt',
+    'invoice',
+    'confirmation',
+    'shipped',
+    'delivered',
+    'tracking',
+    'password reset',
+    'security alert',
+    'account update',
+    'payment',
+    'statement',
+    'bill',
+    'subscription',
+    'renewal',
+    'verification code',
+    'two-factor',
+    '2fa',
+  ];
+}
