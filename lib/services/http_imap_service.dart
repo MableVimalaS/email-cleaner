@@ -18,7 +18,9 @@ class HttpImapService implements ImapServiceInterface {
   bool _isConnected = false;
 
   HttpImapService({String? baseUrl})
-      : _baseUrl = baseUrl ?? 'http://localhost:8081';
+      : _baseUrl = baseUrl ??
+            const String.fromEnvironment('BACKEND_URL',
+                defaultValue: 'http://localhost:8081');
 
   @override
   bool get isConnected => _isConnected;
