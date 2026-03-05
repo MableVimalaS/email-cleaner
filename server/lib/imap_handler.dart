@@ -53,8 +53,8 @@ class ImapSessionManager {
     if (start > end) return [];
 
     final sequence =
-        MessageSequence.fromRange(start, end, isUidSequence: true);
-    final fetchResult = await client.uidFetchMessages(
+        MessageSequence.fromRange(start, end, isUidSequence: false);
+    final fetchResult = await client.fetchMessages(
       sequence,
       '(UID ENVELOPE RFC822.SIZE BODY.PEEK[HEADER.FIELDS '
           '(List-Unsubscribe X-Campaign-Id X-Spam-Flag Precedence X-Mailer)])',
